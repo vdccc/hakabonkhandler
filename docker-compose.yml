@@ -1,0 +1,18 @@
+
+services:
+  db:
+    env_file:
+      - ./db/db.env
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+  web:
+    env_file:
+      - ./web/web.env
+    depends_on:
+      - db
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - 5000:5000

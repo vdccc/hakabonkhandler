@@ -76,3 +76,25 @@ class SQLInsertNewTag(SQLRequest):
 
     def run(self, date, item_id, misses=0):
         return self._abstract_run((date, item_id, misses), fetch=False)
+
+class SQLRequestItemName(SQLRequest):
+
+    def __init__(self, con=SQLConnection()):
+        self.con = con
+        self.body = """
+        SELECT name FROM items WHERE item_id = %s;
+        """
+
+    def run(self, item_id):
+        return self._abstract_run((item_id,))
+
+class SQLInsertNewItem(SQLRequest):
+
+    def __init__(self, con=SQLConnection()):
+        self.con = con # что-то нужно сделать с конфликтами по item_id
+        self.body = """
+        INSERT INTO items(item_id, name) VALUES (%s, %s);
+        """
+
+    def run(self, item_id, item_name):
+        return self._abstract_run((item_id, item_name), fetch=False)

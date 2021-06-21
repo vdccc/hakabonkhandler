@@ -1,86 +1,75 @@
 from flask import Flask, request, jsonify, make_response
+from datetime import datetime
 
-from dbconnection import DBConnection
-from price_url_generator import PriceGenerator
+import db_requests
+import response
 
 app = Flask(__name__)
-
+print("starting...")
 def bump_misses(price_tag_id):
 
-    con = DBConnection()
+    misses = db_requests.SQLRequestGetMisses().run(price_tag_id)
 
-    misses = con.exec("SELECT misses FROM prices WHERE id = %s", (price_tag_id,))
     if misses is None:
         return
 
-    misses = misses[0]
+    db_requests.SQLRequsetUpdateMisses().run(price_tag_id, misses + 1)
 
-    con.exec("UPDATE prices SET misses = (%s) WHERE id = (%s);",
-            (misses + 1, price_tag_id), fetch=False)
 
 def item_seller(item, price_tag_id):
 
-    con = DBConnection()
-    
-    latest_price_tag_date = con.exec("SELECT date FROM prices WHERE item_id = %s ORDER BY date DESC;",
-            (item,))
+    latest_tag_date = db_requests.SQLRequestGetNewestTagDate().run(item)
+    if latest_tag_date is None:
+        return response.ErrorResponse(f"No tags for this item id({item})").json(), 406
 
-    if latest_price_tag_date is None:
-        no_item_res = {
-                "result": "No such item",
-                "error": True
-                }
+    this_tag_date = db_requests.SQLRequsetGetTagDate().run(price_tag_id)
+    if this_tag_date is None:
+        return response.ErrorResponse(f"Unregistered tag id({price_tag_id})").json(), 406
 
-        return make_response(jsonify(no_item_res), 406)
-    else:
-        latest_price_tag_date = latest_price_tag_date[0]
-
-    this_price_tag_date = con.exec("SELECT date FROM prices WHERE id = %s;", (price_tag_id,))
-
-    if this_price_tag_date is None:
-        no_price_tag = {
-                "result": "Unregistered price tag",
-                "error": True
-                }
-
-        return make_response(jsonify(no_price_tag, 406))
-    else:
-        this_price_tag_date = this_price_tag_date[0]
-
-    is_miss = this_price_tag_date == latest_price_tag_date
+    is_miss = this_tag_date != latest_tag_date
     if is_miss:
         bump_misses(price_tag_id)
-    
-    response = {
-            "outdated": is_miss,
-            "latest_tag_date": latest_price_tag_date,
-            "this_tag_date": this_price_tag_date,
-            "error": False,
-            }
 
-    return make_response(jsonify(response), 200) 
+    return response.TagDateResponse(is_miss, latest_tag_date, this_tag_date).json(), 200
+
 
 def item_customer(item, price_tag_id):
     
     bump_misses(price_tag_id)
 
-    return make_response("Customer view", 200)
+    return "Customer view", 200
+
 
 def item_no_price_tag_id(item):
 
-    return f"No price tag id supplied for item {item}"
+    return f"No price tag id supplied for this id({item})", 406
+
 
 @app.route("/c/<int:item>", methods=["GET"])
 def item(item):
 
-    price_tag_id = int(request.args.get("pid"))
+    price_tag_id = request.args.get("pid")
     if price_tag_id is None:
         return item_no_price_tag_id(item)
+
+    price_tag_id = int(price_tag_id) # кладётся здесь если ?pid=12314?seller=228
 
     if request.args.get("seller") is not None:
         return item_seller(item, price_tag_id)
     else:
         return item_customer(item, price_tag_id)
+
+
+@app.route("/f/<int:item>", methods=["GET"])
+def get_new_tag_id(item):
+
+    cur_date = datetime.now()
+    cur_date = cur_date.replace(microsecond=0)
+
+    new_tag_id = db_requests.SQLInsertNewTag().run(cur_date, item)
+
+    return response.NewTagResponse(new_tag_id, cur_date).json(), 200
+
 
 @app.route("/")
 def default():

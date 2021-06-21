@@ -1,34 +1,44 @@
 import psycopg2
-import os
 
-class DBConnection:
+from config import SQLConfig
+
+class SQLConnection:
 
     def __init__(self):
-        self.dbname = "testdb"
-        self.user = "hack"
-        self.password = "hack"
-        self.con = None
-        self.host = os.environ['SQL_HOST']
+        self.dbname = SQLConfig.dbname
+        self.user = SQLConfig.user
+        self.password = SQLConfig.password
+        self.host = SQLConfig.host
 
+        self.con = None
+
+    def connect(self):
+        self.con = psycopg2.connect(dbname=self.dbname, user=self.user,
+                                    password=self.password, host=self.host)
+
+    def close(self):
+        if self.con is not None:
+            self.con.close()
+            self.con = None
 
     def exec(self, req, args, all=False, fetch=True):
+
         if self.con is None:
-            if self.host is not None:
-                self.con = psycopg2.connect(dbname=self.dbname, user=self.user,
-                                            password=self.password, host=self.host)
-            else:
-                self.con = psycopg2.connect(dbname=self.dbname, user=self.user,
-                                            password=self.password)
-        
+            self.connect()
+
         cur = self.con.cursor();
         cur.execute(req, args)
 
         if not fetch:
             self.con.commit()
-            print("not fetch")
-            return ()
 
         if all:
             return cur.fetchall()
         else:
             return cur.fetchone()
+
+    def mogrify(self, req, args):
+        self.connect()
+        result = self.con.cursor().mogrify(req, args)
+        self.close()
+        return result

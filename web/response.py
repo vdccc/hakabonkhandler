@@ -1,4 +1,5 @@
 from flask import jsonify
+from babel.dates import format_datetime
 
 class JSONResponse:
 
@@ -30,8 +31,8 @@ class TagDateResponse(OkResponse):
         self.body = {
             "error": False,
             "outdated": is_outdated,
-            "latest_tag_date": latest_tag_date,
-            "this_tag_date": this_tag_date,
+            "latest_tag_date": format_datetime(latest_tag_date, locale="ru_RU"),
+            "this_tag_date": format_datetime(this_tag_date, locale="ru_RU"),
             "item_id": item_id,
             "item_name": item_name
         }

@@ -53,3 +53,11 @@ class NewItemResponse(OkResponse):
             "item_id": item_id,
             "item_name": item_name
         }
+
+class GetGroupResponse(OkResponse):
+
+    def __init__(self, group):
+        self.body = {
+            "error": False,
+            "items": group,
+        }

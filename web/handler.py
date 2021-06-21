@@ -6,6 +6,17 @@ import response
 
 app = Flask(__name__)
 
+def itm(item_id, item_name):
+    return {
+        "item_id": item_id,
+        "item_name": item_name,
+    }
+
+groups = {
+    1: [itm(1, "Teapot"), itm(2, "Microwave"), itm(3, "Vacuum Cleaner")],
+    2: [itm(4, "Big Tv"), itm(5, "Small tv"), itm(6, "Nice tv"), itm(7, "Gamer Tv")]
+}
+
 # item_id это то SKU или артикул
 
 def bump_misses(price_tag_id):
@@ -108,6 +119,15 @@ def add_new_item():
     db_requests.SQLInsertNewItem().run(item_id, item_name)
 
     return response.NewItemResponse(item_id, item_name).json(), 200
+
+
+@app.route("/get_items_from_group/<int:group_id>", methods=["GET"])
+def get_items_from_group(group_id):
+    if group_id in groups.keys():
+        return response.GetGroupResponse(groups[group_id]).json(), 200
+    else:
+        return response.ErrorResponse(f"No such group_id({group_id})")
+
 
 @app.route("/")
 def default():

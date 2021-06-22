@@ -3,6 +3,7 @@ from datetime import datetime
 
 import db_requests
 import response
+from tgalert import TgAlert
 
 app = Flask(__name__)
 
@@ -25,6 +26,16 @@ def bump_misses(price_tag_id):
 
     if misses is None:
         return
+
+    item_id = db_requests.SQLRequestItemIdFromPriceTag().run(price_tag_id)
+    if item_id is None:
+        return
+
+    item_name = db_requests.SQLRequestItemName().run(item_id)
+    if item_name is None:
+        return
+
+    TgAlert().send(f"Отсканило просроченный чек {price_tag_id} товара {item_name}")
 
     db_requests.SQLRequsetUpdateMisses().run(price_tag_id, misses + 1)
 
@@ -52,8 +63,18 @@ def item_seller(item, price_tag_id):
 
 
 def item_customer(item, price_tag_id):
-    
-    bump_misses(price_tag_id)
+    # duble
+    latest_tag_date = db_requests.SQLRequestGetNewestTagDate().run(item)
+    if latest_tag_date is None:
+        return response.ErrorResponse(f"No tags for this item id({item})").json(), 406
+
+    this_tag_date = db_requests.SQLRequsetGetTagDate().run(price_tag_id)
+    if this_tag_date is None:
+        return response.ErrorResponse(f"Unregistered tag id({price_tag_id})").json(), 406
+
+    is_miss = this_tag_date != latest_tag_date
+    if is_miss:
+        bump_misses(price_tag_id)
 
     return "Customer view", 200
 

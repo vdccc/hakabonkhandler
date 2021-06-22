@@ -1,4 +1,5 @@
 wheel
+requests
 babel
 Flask==2.0.1
 psycopg2==2.9.1

@@ -98,3 +98,14 @@ class SQLInsertNewItem(SQLRequest):
 
     def run(self, item_id, item_name):
         return self._abstract_run((item_id, item_name), fetch=False)
+
+class SQLRequestItemIdFromPriceTag(SQLRequest):
+
+   def __init__(self, con=SQLConnection()):
+       self.con = con
+       self.body = """
+       SELECT item_id FROM prices WHERE id = %s;
+       """
+
+   def run(self, price_tag_id):
+        return self._abstract_run((price_tag_id,))

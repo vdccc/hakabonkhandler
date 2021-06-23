@@ -14,6 +14,9 @@ class TgAlert(Alert):
        self.url = TgConfig.api_url + TgConfig.bot_method
 
     def send(self, text):
+        if TgConfig.bot_method is None:
+            return
+
         data = {
             "chat_id": TgConfig.chat_id,
             "text": text
